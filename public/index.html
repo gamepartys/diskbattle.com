@@ -1,82 +1,143 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hızlı Geçiş Online</title>
-  <style>
-    body {
-      margin:0; padding:0;
-      background:#111; color:white;
-      font-family:sans-serif;
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
-      height:100vh; overflow:hidden;
-    }
-    #menu, #lobby, #game {
-      display:none;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
-    }
-    input, button, select {
-      padding:8px 12px;
-      font-size:16px;
-      border-radius:6px;
-      border:none;
-    }
-    button {
-      background:#4cafef;
-      color:white;
-      cursor:pointer;
-    }
-    button:hover { background:#369; }
-    canvas {
-      background:#222;
-      display:block;
-    }
-    #scoreboard {
-      position:absolute;
-      top:10px; left:50%;
-      transform:translateX(-50%);
-      display:flex; gap:50px;
-      font-size:20px; font-weight:bold;
-    }
-    #scoreboard div {
-      padding:6px 12px;
-      border-radius:8px;
-    }
-    #blueScore { background:#0055ff; }
-    #redScore { background:#ff2222; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Hızlı Geçiş – Online</title>
+<style>
+  :root { color-scheme: dark; }
+  body{ margin:0; background:#0b1220; color:#e6eefc; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif; }
+  .wrap{ max-width:1200px; margin:24px auto; padding:0 16px; }
+  .card{ background:#0f172a; border:1px solid #1e293b; border-radius:14px; padding:16px; }
+  h1{ margin:0 0 12px; font-size:22px; }
+  label{ display:block; margin:10px 0 6px; opacity:.9 }
+  input,select,button{ padding:10px 12px; border-radius:10px; border:1px solid #334155; background:#0b1220; color:#e6eefc; }
+  input:focus,select:focus{ outline:2px solid #2563eb; }
+  .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .row>*{ flex:1; min-width:180px; }
+  .btn{ background:#1d4ed8; border-color:#1d4ed8; cursor:pointer; }
+  .btn2{ background:#334155; border-color:#334155; cursor:pointer; }
+  .small{ font-size:12px; opacity:.8 }
+  .muted{ opacity:.7 }
+  /* Oyun düzeni */
+  .stage{ display:grid; grid-template-columns:200px 1fr 200px; gap:14px; align-items:center; margin-top:12px; }
+  .side{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .scoreBig{ display:flex; justify-content:center; gap:12px; margin:12px 0; }
+  .scorePill{ padding:6px 14px; border-radius:999px; font-weight:700; }
+  .b{ background:#0ea5e9; color:#001b2e; }
+  .r{ background:#f43f5e; color:#2b0007; }
+  .avatarCard{ width:100%; background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:10px; text-align:center; }
+  .avatarImg{ width:72px; height:72px; border-radius:50%; display:block; margin:4px auto 6px; background:#0b1220; border:1px solid #334155; }
+  .anlik{ font-size:12px; opacity:.85; margin-top:2px; }
+  canvas{ width:100%; height:auto; display:block; background:#0b1220; border:1px solid #1e293b; border-radius:14px; }
+  /* Avatar seçim şeritleri */
+  .avatarPick{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  .pick{ width:42px; height:42px; border-radius:50%; border:2px solid transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:22px; }
+  .pick.sel{ border-color:#1d4ed8; box-shadow:0 0 0 2px rgba(29,78,216,.25); }
+</style>
 </head>
 <body>
-  <!-- Menü -->
-  <div id="menu">
-    <h1>Hızlı Geçiş Online</h1>
-    <input id="roomInput" placeholder="Oda Kodu (opsiyonel)">
-    <button id="createBtn">Oda Kur</button>
-    <button id="joinBtn">Odaya Gir</button>
-  </div>
+<div class="wrap">
 
-  <!-- Lobi -->
-  <div id="lobby">
-    <h2>Oda: <span id="roomCode"></span></h2>
-    <p id="teamInfo"></p>
-    <button id="readyBtn">Hazırım</button>
-  </div>
+  <!-- LOBİ -->
+  <div class="card" id="lobby">
+    <h1>Hızlı Geçiş – Online</h1>
 
-  <!-- Oyun -->
-  <div id="game">
-    <div id="scoreboard">
-      <div id="blueScore">Mavi: 0</div>
-      <div id="redScore">Kırmızı: 0</div>
+    <div class="row">
+      <div>
+        <label>Nick</label>
+        <input id="nick" placeholder="nick" maxlength="16">
+      </div>
+      <div>
+        <label>Takım</label>
+        <select id="team">
+          <option value="blue">Mavi (P1)</option>
+          <option value="red">Kırmızı (P2)</option>
+        </select>
+      </div>
+      <div>
+        <label>Hedef (Win)</label>
+        <select id="target">
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="20">20</option>
+        </select>
+      </div>
     </div>
-    <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+    <label style="margin-top:10px">Avatar seç</label>
+    <div class="avatarPick" id="avatarPick">
+      <!-- emoji avatarları -->
+      <div class="pick sel" data-a="😀">😀</div>
+      <div class="pick" data-a="😎">😎</div>
+      <div class="pick" data-a="🦊">🦊</div>
+      <div class="pick" data-a="🐱">🐱</div>
+      <div class="pick" data-a="🐵">🐵</div>
+      <div class="pick" data-a="🚀">🚀</div>
+      <div class="pick" data-a="🌀">🌀</div>
+      <div class="pick" data-a="⭐">⭐</div>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="createBtn">Oda Kur</button>
+      <button class="btn2" id="readyBtn" disabled>Hazırım</button>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <div>
+        <label>Oda kodu</label>
+        <input id="code" placeholder="örn: ABCD2" maxlength="6">
+      </div>
+      <div style="display:flex; gap:8px; align-items:flex-end">
+        <button class="btn" id="joinBtn">Odaya Gir</button>
+        <button class="btn2" id="copyLinkBtn">Linki Kopyala</button>
+      </div>
+    </div>
+
+    <div class="small" id="who" style="margin-top:6px"></div>
+    <div class="small muted" id="lobbyState" style="margin-top:6px">-</div>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="client.js"></script>
+  <!-- GENEL SKOR üstte -->
+  <div class="scoreBig" id="hudTop" style="display:none">
+    <div class="scorePill b" id="blueScore">Mavi: 0</div>
+    <div class="scorePill r" id="redScore">Kırmızı: 0</div>
+  </div>
+
+  <!-- OYUN SAHASI + YAN PANELLER -->
+  <div class="stage" id="stage" style="display:none">
+    <!-- Sol panel (KIRMIZI) -->
+    <div class="side">
+      <div class="avatarCard">
+        <div class="anlik" id="leftRound">Kırmızı anlık: 0 / 5</div>
+        <div class="avatarImg" id="leftAvatar">😶</div>
+        <div id="leftNick">-</div>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div>
+      <canvas id="cv" width="900" height="540"></canvas>
+      <div class="small muted" style="text-align:center;margin-top:6px" id="hint">Taşı seçip geriye doğru çek – bırak: atış</div>
+      <div class="card" id="postGame" style="margin-top:10px; display:none; text-align:center">
+        <div id="postText" style="margin-bottom:8px"></div>
+        <button class="btn" id="rematchBtn">Tekrar</button>
+      </div>
+    </div>
+
+    <!-- Sağ panel (MAVİ) -->
+    <div class="side">
+      <div class="avatarCard">
+        <div class="anlik" id="rightRound">Mavi anlık: 0 / 5</div>
+        <div class="avatarImg" id="rightAvatar">😶</div>
+        <div id="rightNick">-</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="./client.js"></script>
 </body>
 </html>
