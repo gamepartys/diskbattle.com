@@ -1,115 +1,43 @@
-/* GENEL TASARIM */
-body {
-  margin: 0;
-  background-color: #0e1217;
-  color: #fff;
-  font-family: 'Segoe UI', Arial, sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  overflow: hidden;
-}
+const express = require("express");
+const app = express();
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
 
-.hidden {
-  display: none;
-}
+app.use(express.static("public"));
 
-/* ANA KART */
-#menu {
-  background: #121826;
-  border: 1px solid #1c2433;
-  border-radius: 16px;
-  padding: 40px;
-  width: 420px;
-  text-align: center;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
-  animation: fadeIn 0.5s ease;
-}
+const rooms = {};
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
+io.on("connection", (socket) => {
+  console.log("Bir kullanıcı bağlandı.");
 
-/* BAŞLIK */
-h1 {
-  margin-bottom: 30px;
-  font-size: 1.8em;
-  color: #4da3ff;
-}
+  socket.on("createRoom", ({ playerName }) => {
+    const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    rooms[roomCode] = { players: [{ id: socket.id, name: playerName }] };
+    socket.join(roomCode);
+    socket.emit("roomCreated", { roomCode });
+  });
 
-/* INPUTLAR */
-input {
-  width: 85%;
-  padding: 12px;
-  margin: 12px 0;
-  border: none;
-  border-radius: 8px;
-  background-color: #1c2331;
-  color: #fff;
-  font-size: 1rem;
-  outline: none;
-  text-align: center;
-  transition: background 0.3s;
-}
+  socket.on("joinRoom", ({ roomCode, playerName }) => {
+    const room = rooms[roomCode];
+    if (!room) {
+      socket.emit("errorMessage", "Böyle bir oda yok.");
+      return;
+    }
+    if (room.players.length >= 2) {
+      socket.emit("errorMessage", "Oda dolu.");
+      return;
+    }
 
-input:focus {
-  background-color: #232c3f;
-}
+    room.players.push({ id: socket.id, name: playerName });
+    socket.join(roomCode);
+    socket.emit("roomJoined");
+    io.to(roomCode).emit("message", `${playerName} odaya katıldı!`);
+  });
 
-/* BUTONLAR */
-button {
-  width: 90%;
-  padding: 12px;
-  margin: 10px 0;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  color: white;
-  transition: background 0.25s, transform 0.1s;
-}
+  socket.on("disconnect", () => {
+    console.log("Bir kullanıcı ayrıldı.");
+  });
+});
 
-button:active {
-  transform: scale(0.97);
-}
-
-.primary {
-  background-color: #007bff;
-}
-
-.primary:hover {
-  background-color: #0063d1;
-}
-
-.secondary {
-  background-color: #2b3244;
-}
-
-.secondary:hover {
-  background-color: #363e53;
-}
-
-/* MESAJ ALANI */
-#message {
-  margin-top: 20px;
-  font-size: 1rem;
-  color: #aaa;
-}
-
-/* LOBBY BİLGİLERİ */
-#lobbyInfo {
-  margin-top: 20px;
-  background-color: #1a2132;
-  border-radius: 12px;
-  padding: 15px;
-  font-size: 0.9rem;
-  color: #cdd4e1;
-  word-break: break-all;
-}
-
-#lobbyInfo span {
-  color: #4da3ff;
-  font-weight: bold;
-}
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, () => console.log("Server çalışıyor: " + PORT));
