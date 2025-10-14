@@ -1,63 +1,115 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const path = require("path");
+/* GENEL TASARIM */
+body {
+  margin: 0;
+  background-color: #0e1217;
+  color: #fff;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+}
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+.hidden {
+  display: none;
+}
 
-const PORT = process.env.PORT || 3000;
+/* ANA KART */
+#menu {
+  background: #121826;
+  border: 1px solid #1c2433;
+  border-radius: 16px;
+  padding: 40px;
+  width: 420px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.5s ease;
+}
 
-// Statik dosyalar (public klasörü)
-app.use(express.static(path.join(__dirname, "public")));
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+/* BAŞLIK */
+h1 {
+  margin-bottom: 30px;
+  font-size: 1.8em;
+  color: #4da3ff;
+}
 
-// Oda verileri
-const rooms = {};
+/* INPUTLAR */
+input {
+  width: 85%;
+  padding: 12px;
+  margin: 12px 0;
+  border: none;
+  border-radius: 8px;
+  background-color: #1c2331;
+  color: #fff;
+  font-size: 1rem;
+  outline: none;
+  text-align: center;
+  transition: background 0.3s;
+}
 
-io.on("connection", (socket) => {
-  console.log("Yeni kullanıcı bağlandı:", socket.id);
+input:focus {
+  background-color: #232c3f;
+}
 
-  socket.on("joinRoom", ({ roomCode, nick }) => {
-    if (!rooms[roomCode]) {
-      rooms[roomCode] = { players: {}, scores: { blue: 0, red: 0 } };
-    }
+/* BUTONLAR */
+button {
+  width: 90%;
+  padding: 12px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: white;
+  transition: background 0.25s, transform 0.1s;
+}
 
-    const room = rooms[roomCode];
-    const team = Object.keys(room.players).length === 0 ? "blue" : "red";
+button:active {
+  transform: scale(0.97);
+}
 
-    room.players[socket.id] = { nick, team };
-    socket.join(roomCode);
+.primary {
+  background-color: #007bff;
+}
 
-    socket.emit("joined", { team, scores: room.scores });
-    io.to(roomCode).emit("roomUpdate", room);
-  });
+.primary:hover {
+  background-color: #0063d1;
+}
 
-  socket.on("scoreUpdate", ({ roomCode, team }) => {
-    const room = rooms[roomCode];
-    if (!room) return;
+.secondary {
+  background-color: #2b3244;
+}
 
-    room.scores[team]++;
-    if (room.scores[team] >= 5) {
-      io.to(roomCode).emit("gameOver", { winner: team });
-      room.scores.blue = 0;
-      room.scores.red = 0;
-    }
-    io.to(roomCode).emit("roomUpdate", room);
-  });
+.secondary:hover {
+  background-color: #363e53;
+}
 
-  socket.on("disconnect", () => {
-    for (const [code, room] of Object.entries(rooms)) {
-      if (room.players[socket.id]) {
-        delete room.players[socket.id];
-        io.to(code).emit("roomUpdate", room);
-      }
-    }
-  });
-});
+/* MESAJ ALANI */
+#message {
+  margin-top: 20px;
+  font-size: 1rem;
+  color: #aaa;
+}
 
-server.listen(PORT, () => console.log(`✅ Server aktif: ${PORT}`));
+/* LOBBY BİLGİLERİ */
+#lobbyInfo {
+  margin-top: 20px;
+  background-color: #1a2132;
+  border-radius: 12px;
+  padding: 15px;
+  font-size: 0.9rem;
+  color: #cdd4e1;
+  word-break: break-all;
+}
+
+#lobbyInfo span {
+  color: #4da3ff;
+  font-weight: bold;
+}
