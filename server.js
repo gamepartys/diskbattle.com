@@ -9,25 +9,27 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 const PORT = process.env.PORT || 3000;
 
-// Static files
+// Statik dosyalar (public klasörü)
 app.use(express.static(path.join(__dirname, "public")));
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Room data
+// Oda verileri
 const rooms = {};
 
 io.on("connection", (socket) => {
-  console.log("user connected:", socket.id);
+  console.log("Yeni kullanıcı bağlandı:", socket.id);
 
   socket.on("joinRoom", ({ roomCode, nick }) => {
     if (!rooms[roomCode]) {
       rooms[roomCode] = { players: {}, scores: { blue: 0, red: 0 } };
     }
-    const room = rooms[roomCode];
 
+    const room = rooms[roomCode];
     const team = Object.keys(room.players).length === 0 ? "blue" : "red";
+
     room.players[socket.id] = { nick, team };
     socket.join(roomCode);
 
@@ -50,11 +52,12 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     for (const [code, room] of Object.entries(rooms)) {
-      delete room.players[socket.id];
+      if (room.players[socket.id]) {
+        delete room.players[socket.id];
+        io.to(code).emit("roomUpdate", room);
+      }
     }
   });
 });
 
-server.listen(PORT, () =>
-  console.log(`✅ Server running on port ${PORT}`)
-);
+server.listen(PORT, () => console.log(`✅ Server aktif: ${PORT}`));
