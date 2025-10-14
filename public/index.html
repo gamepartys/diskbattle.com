@@ -1,28 +1,49 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Disk Battle ⚡</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Disk Battle - Online</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="menu">
-    <h1>Disk Battle ⚡</h1>
-    <input id="nick" placeholder="Nick girin" maxlength="12" />
-    <input id="room" placeholder="Oda kodu (örn: AB12)" maxlength="4" />
-    <button id="joinBtn">Hazırım</button>
-  </div>
+    <h1>Disk Battle</h1>
 
-  <div id="game" class="hidden">
-    <div id="scoreboard">
-      <div class="score blue">💙 Mavi: <span id="blueScore">0</span></div>
-      <div class="score red">❤️ Kırmızı: <span id="redScore">0</span></div>
+    <!-- 1. ADIM -->
+    <div id="step1">
+      <button id="createRoom" class="primary">Oda Kur</button>
+      <button id="joinRoom" class="secondary">Odaya Gir</button>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
+    <!-- 2. ADIM: NICK GİR -->
+    <div id="step2" class="hidden">
+      <h2>İsmini Gir</h2>
+      <input type="text" id="playerName" maxlength="12" placeholder="Kullanıcı adı">
+      <button id="confirmName" class="primary">Devam Et</button>
+      <button id="back1" class="secondary">Geri</button>
+    </div>
 
-    <div id="msg"></div>
+    <!-- 3. ADIM: ODA KODU -->
+    <div id="step3" class="hidden">
+      <h2>Oda Kodu</h2>
+      <div id="roomCreate" class="hidden">
+        <p>Hazır olduğunda başlatabilirsin.</p>
+        <button id="readyBtn" class="primary">Hazırım</button>
+        <div id="lobbyInfo" class="hidden">
+          <p>Oda Kodu: <span id="roomCodeDisplay"></span></p>
+          <button id="copyLink" class="secondary">Linki Kopyala</button>
+        </div>
+      </div>
+
+      <div id="roomJoin" class="hidden">
+        <input type="text" id="roomCodeInput" maxlength="6" placeholder="Oda kodu">
+        <button id="joinBtn" class="primary">Odaya Katıl</button>
+        <button id="back2" class="secondary">Geri</button>
+      </div>
+    </div>
+
+    <!-- MESAJ ALANI -->
+    <div id="message"></div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
