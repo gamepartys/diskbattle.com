@@ -1,128 +1,85 @@
 const socket = io();
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-canvas.width = 800;
-canvas.height = 400;
-
+let playerName = "";
 let roomCode = "";
-let team = "";
-let discs = [];
-let dragDisc = null;
-let mousePos = { x: 0, y: 0 };
 
-// Odaya katıl
-document.getElementById("joinBtn").onclick = () => {
-  const nick = document.getElementById("nick").value.trim();
-  roomCode = document.getElementById("room").value.trim().toUpperCase();
-  if (!nick || !roomCode) return alert("Nick ve oda kodu girin!");
-  socket.emit("joinRoom", { roomCode, nick });
+// 1. Ekran - Oda seçimi
+const step1 = document.getElementById("step1");
+const step2 = document.getElementById("step2");
+const step3 = document.getElementById("step3");
+const message = document.getElementById("message");
+
+document.getElementById("createRoom").onclick = () => {
+  step1.classList.add("hidden");
+  step2.classList.remove("hidden");
+  step2.dataset.action = "create";
 };
 
-socket.on("joined", (data) => {
-  team = data.team;
-  document.getElementById("menu").classList.add("hidden");
-  document.getElementById("game").classList.remove("hidden");
-  setupDiscs();
-});
+document.getElementById("joinRoom").onclick = () => {
+  step1.classList.add("hidden");
+  step2.classList.remove("hidden");
+  step2.dataset.action = "join";
+};
 
-socket.on("roomUpdate", (room) => {
-  document.getElementById("blueScore").textContent = room.scores.blue;
-  document.getElementById("redScore").textContent = room.scores.red;
-});
-
-socket.on("gameOver", ({ winner }) => {
-  document.getElementById("msg").textContent = 
-    winner === "blue" ? "💙 Mavi kazandı!" : "❤️ Kırmızı kazandı!";
-  setTimeout(() => {
-    document.getElementById("msg").textContent = "";
-    setupDiscs();
-  }, 3000);
-});
-
-// Diskleri oluştur
-function setupDiscs() {
-  discs = [];
-  const baseX = team === "blue" ? 150 : 650;
-  const color = team === "blue" ? "#33aaff" : "#ff5555";
-  for (let i = 0; i < 5; i++) {
-    discs.push({
-      x: baseX + (i % 3) * 30,
-      y: 150 + Math.floor(i / 3) * 30,
-      vx: 0,
-      vy: 0,
-      color,
-    });
+document.getElementById("confirmName").onclick = () => {
+  const name = document.getElementById("playerName").value.trim();
+  if (!name) {
+    message.textContent = "Lütfen bir isim gir.";
+    return;
   }
-}
+  playerName = name;
+  step2.classList.add("hidden");
+  step3.classList.remove("hidden");
 
-canvas.addEventListener("mousedown", (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  dragDisc = discs.find((d) => Math.hypot(d.x - x, d.y - y) < 20);
-  mousePos = { x, y };
-});
-
-canvas.addEventListener("mousemove", (e) => {
-  const rect = canvas.getBoundingClientRect();
-  mousePos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-});
-
-canvas.addEventListener("mouseup", () => {
-  if (dragDisc) {
-    dragDisc.vx = (dragDisc.x - mousePos.x) * 0.25;
-    dragDisc.vy = (dragDisc.y - mousePos.y) * 0.25;
-    dragDisc = null;
+  if (step2.dataset.action === "create") {
+    document.getElementById("roomCreate").classList.remove("hidden");
+    socket.emit("createRoom", { playerName });
+  } else {
+    document.getElementById("roomJoin").classList.remove("hidden");
   }
+};
+
+document.getElementById("back1").onclick = () => {
+  step2.classList.add("hidden");
+  step1.classList.remove("hidden");
+};
+
+document.getElementById("back2").onclick = () => {
+  step3.classList.add("hidden");
+  step1.classList.remove("hidden");
+};
+
+// ODA OLUŞTURMA
+document.getElementById("readyBtn").onclick = () => {
+  document.getElementById("lobbyInfo").classList.remove("hidden");
+  message.textContent = "Oda oluşturuldu, bekleniyor...";
+};
+
+document.getElementById("copyLink").onclick = () => {
+  navigator.clipboard.writeText(window.location.href + "?room=" + roomCode);
+  message.textContent = "Bağlantı kopyalandı!";
+};
+
+// ODAYA GİRİŞ
+document.getElementById("joinBtn").onclick = () => {
+  const code = document.getElementById("roomCodeInput").value.trim();
+  if (!code) {
+    message.textContent = "Oda kodunu gir.";
+    return;
+  }
+  roomCode = code;
+  socket.emit("joinRoom", { roomCode, playerName });
+};
+
+// SOCKET OLAYLARI
+socket.on("roomCreated", (data) => {
+  roomCode = data.roomCode;
+  document.getElementById("roomCodeDisplay").textContent = roomCode;
 });
 
-function update() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+socket.on("roomJoined", () => {
+  message.textContent = "Odaya başarıyla katıldın!";
+});
 
-  // Orta çizgi (görsel, geçilebilir)
-  ctx.strokeStyle = "#444";
-  ctx.beginPath();
-  ctx.moveTo(canvas.width / 2, 0);
-  ctx.lineTo(canvas.width / 2, canvas.height);
-  ctx.stroke();
-
-  // Disk fiziği
-  for (let d of discs) {
-    if (dragDisc === d) {
-      ctx.beginPath();
-      ctx.moveTo(d.x, d.y);
-      ctx.lineTo(mousePos.x, mousePos.y);
-      ctx.strokeStyle = "#aaa";
-      ctx.stroke();
-    }
-
-    d.x += d.vx;
-    d.y += d.vy;
-    d.vx *= 0.98;
-    d.vy *= 0.98;
-
-    if (d.y < 20 || d.y > canvas.height - 20) d.vy *= -1;
-    if (d.x < 20) d.vx *= -1;
-    if (d.x > canvas.width - 20) d.vx *= -1;
-
-    // Skor kontrolü
-    if (team === "blue" && d.x > canvas.width / 2 + 30) {
-      socket.emit("scoreUpdate", { roomCode, team: "blue" });
-      setupDiscs();
-      break;
-    } else if (team === "red" && d.x < canvas.width / 2 - 30) {
-      socket.emit("scoreUpdate", { roomCode, team: "red" });
-      setupDiscs();
-      break;
-    }
-
-    // Disk çiz
-    ctx.beginPath();
-    ctx.arc(d.x, d.y, 15, 0, Math.PI * 2);
-    ctx.fillStyle = d.color;
-    ctx.fill();
-  }
-
-  requestAnimationFrame(update);
-}
-update();
+socket.on("errorMessage", (msg) => {
+  message.textContent = msg;
+});
